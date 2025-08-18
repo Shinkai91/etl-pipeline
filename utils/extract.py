@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 
 BASE_URL = "https://fashion-studio.dicoding.dev"
 TIMEOUT = 15
-TOTAL_PAGES = 50  # halaman 1..50 sesuai ketentuan
+TOTAL_PAGES = 50
 
 
 @dataclass
@@ -54,7 +54,6 @@ def _fetch_html(url: str, session: requests.Session) -> str:
         return resp.text
     except requests.exceptions.RequestException as e:
         logging.error(f"Gagal mengambil URL {url}: {e}")
-        # Advanced: tetap raise agar bisa di-handle di level atas tanpa crash total pipeline
         raise
 
 
@@ -63,7 +62,6 @@ def _find_cards(soup: BeautifulSoup) -> List[Tag]:
     Mengembalikan list elemen card produk.
     Selector sengaja fleksibel karena struktur situs bisa berbeda.
     """
-    # Coba beberapa selector umum
     candidates = [
         ".product-card",
         ".card.product",
@@ -76,7 +74,6 @@ def _find_cards(soup: BeautifulSoup) -> List[Tag]:
         cards = soup.select(sel)
         if cards:
             return cards
-    # fallback: cari elemen yang punya judul & harga
     cards = []
     for cont in soup.find_all(["div", "article", "li"]):
         title = cont.select_one(".product-title") or cont.find(
@@ -98,38 +95,32 @@ def _extract_with_patterns(container: Tag) -> Dict[str, str]:
     """
     Ekstraksi field dengan beberapa pola umum agar robust.
     """
-    # Title
     title = (
         _text(container.select_one(".product-title"))
         or _text(container.find(["h2", "h3", "h4"]))
     )
 
-    # Price (format dolar mentah, contoh: $12.99)
     price = (
         _text(container.select_one(".product-price"))
         or _text(container.find(string=re.compile(r"\$\s*\d")))
     )
 
-    # Rating (bisa "4.8 / 5" atau angka saja)
     rating = (
         _text(container.select_one(".product-rating"))
         or _text(container.find(string=re.compile(r"\d+(\.\d+)?\s*/\s*5")))
         or _text(container.find(string=re.compile(r"^\d+(\.\d+)?$")))
     )
 
-    # Colors (bisa "3 Colors", "Colors: 3", dsb)
     colors = (
         _text(container.select_one(".product-colors"))
         or _text(container.find(string=re.compile(r"Colors?", re.I)))
     )
 
-    # Size (bisa "Size: M")
     size = (
         _text(container.select_one(".product-size"))
         or _text(container.find(string=re.compile(r"Size", re.I)))
     )
 
-    # Gender (bisa "Gender: Men/Women/Unisex")
     gender = (
         _text(container.select_one(".product-gender"))
         or _text(container.find(string=re.compile(r"Gender", re.I)))
@@ -152,7 +143,12 @@ def scrape_page(page: int, session: requests.Session | None = None) -> List[Prod
     if not session:
         session = _requests_session()
 
-    url = f"{BASE_URL}/?page={page}"
+    if page == 1:
+        url = f"{BASE_URL}/"
+    else:
+        url = f"{BASE_URL}/page{page}"
+
+    logging.info(f"Mengambil data dari URL: {url}")
     html = _fetch_html(url, session)
     soup = BeautifulSoup(html, "html.parser")
 
@@ -164,7 +160,6 @@ def scrape_page(page: int, session: requests.Session | None = None) -> List[Prod
         try:
             fields = _extract_with_patterns(c)
             if not fields.get("Title") or not fields.get("Price"):
-                # minimal validasi di tahap extract
                 continue
             prod = ProductRaw(
                 Title=fields["Title"],
@@ -177,7 +172,6 @@ def scrape_page(page: int, session: requests.Session | None = None) -> List[Prod
             )
             results.append(prod)
         except Exception as e:
-            # Advanced: kartu yang gagal tidak menghentikan scraping
             logging.warning(f"Gagal parsing 1 produk di page {page}: {e}")
             continue
 

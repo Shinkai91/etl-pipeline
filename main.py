@@ -1,5 +1,3 @@
-# main.py
-
 from utils.extract import extract_all
 from utils.transform import transform
 from utils.load import load_to_csv, load_to_gsheets, load_to_postgres

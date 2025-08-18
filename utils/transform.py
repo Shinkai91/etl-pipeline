@@ -70,20 +70,16 @@ def transform(rows: List[Dict[str, str]]) -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
 
-    # Pastikan kolom wajib ada
     required_cols = ["Title", "Price", "Rating", "Colors", "Size", "Gender", "Timestamp"]
     for col in required_cols:
         if col not in df.columns:
             raise KeyError(f"Kolom wajib '{col}' tidak ditemukan pada data hasil extract.")
 
-    # Hapus baris yang semua kolom pentingnya kosong
     df.dropna(subset=["Title", "Price"], inplace=True)
 
-    # Hapus invalid Title & Rating text
     df = df[df["Title"].astype(str).str.strip().ne(INVALID_TITLE)]
     df = df[df["Rating"].astype(str).str.strip().ne(INVALID_RATING_TEXT)]
 
-    # Konversi Price: "$12.99" -> 12.99 -> * 16000 -> int
     def _usd_to_idr(text: str) -> int | None:
         val = _to_float_from_text(text)
         if val is None:
@@ -92,20 +88,15 @@ def transform(rows: List[Dict[str, str]]) -> pd.DataFrame:
 
     df["Price"] = df["Price"].apply(_usd_to_idr)
 
-    # Rating ke float
     df["Rating"] = df["Rating"].apply(_to_float_from_text)
 
-    # Colors ke int (hanya angka)
     df["Colors"] = df["Colors"].apply(_to_int_from_text)
 
-    # Bersihkan Size dan Gender
     df["Size"] = df["Size"].astype(str).apply(lambda x: _clean_prefix(x, "Size:"))
     df["Gender"] = df["Gender"].astype(str).apply(lambda x: _clean_prefix(x, "Gender:"))
 
-    # Hapus baris bila ada kolom penting yang null setelah konversi
     df.dropna(subset=["Title", "Price", "Rating", "Colors", "Size", "Gender", "Timestamp"], inplace=True)
 
-    # Tipe data sesuai rubric
     df = df.astype(
         {
             "Title": "string",
@@ -118,7 +109,6 @@ def transform(rows: List[Dict[str, str]]) -> pd.DataFrame:
         }
     )
 
-    # Hapus duplikat (gunakan subset yang masuk akal)
     df.drop_duplicates(
         subset=["Title", "Price", "Rating", "Colors", "Size", "Gender"], inplace=True
     )

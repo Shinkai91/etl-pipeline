@@ -84,7 +84,6 @@ def load_to_postgres(df: pd.DataFrame, db_config: dict, table_name: str = "etl_d
         conn = psycopg2.connect(**db_config)
         cur = conn.cursor()
 
-        # Buat tabel jika belum ada
         create_table_query = f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
             id SERIAL PRIMARY KEY,
@@ -99,7 +98,6 @@ def load_to_postgres(df: pd.DataFrame, db_config: dict, table_name: str = "etl_d
         """
         cur.execute(create_table_query)
 
-        # Insert data
         for _, row in df.iterrows():
             cur.execute(
                 f"INSERT INTO {table_name} (Title, Price, Rating, Colors, Size, Gender, Timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s)",
