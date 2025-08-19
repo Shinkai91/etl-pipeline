@@ -55,11 +55,12 @@ def _clean_prefix(text: str, prefix: str) -> str:
 def transform(rows: List[Dict[str, str]]) -> pd.DataFrame:
     """
     Membersihkan dan mengonversi data sesuai rubric.
-    - Price (USD string) -> Rupiah (int) * 16.000
+    - Price (USD string) -> Rupiah (float) * 16.000
     - Rating -> float
     - Colors -> int
     - Size -> string tanpa "Size: "
     - Gender -> string tanpa "Gender: "
+    - Timestamp -> datetime
     - Hapus null, duplikat, invalid
     """
     if not rows:
@@ -80,18 +81,15 @@ def transform(rows: List[Dict[str, str]]) -> pd.DataFrame:
     df = df[df["Title"].astype(str).str.strip().ne(INVALID_TITLE)]
     df = df[df["Rating"].astype(str).str.strip().ne(INVALID_RATING_TEXT)]
 
-    def _usd_to_idr(text: str) -> int | None:
+    def _usd_to_idr(text: str) -> float | None:
         val = _to_float_from_text(text)
         if val is None:
             return None
-        return int(round(val * RUPIAH_RATE))
+        return val * RUPIAH_RATE
 
     df["Price"] = df["Price"].apply(_usd_to_idr)
-
     df["Rating"] = df["Rating"].apply(_to_float_from_text)
-
     df["Colors"] = df["Colors"].apply(_to_int_from_text)
-
     df["Size"] = df["Size"].astype(str).apply(lambda x: _clean_prefix(x, "Size:"))
     df["Gender"] = df["Gender"].astype(str).apply(lambda x: _clean_prefix(x, "Gender:"))
 
@@ -100,12 +98,12 @@ def transform(rows: List[Dict[str, str]]) -> pd.DataFrame:
     df = df.astype(
         {
             "Title": "string",
-            "Price": "int64",
+            "Price": "float64",
             "Rating": "float64",
             "Colors": "int64",
             "Size": "string",
             "Gender": "string",
-            "Timestamp": "string",
+            "Timestamp": "datetime64[ns]",
         }
     )
 

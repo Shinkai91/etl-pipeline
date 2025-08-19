@@ -154,7 +154,7 @@ def scrape_page(page: int, session: requests.Session | None = None) -> List[Prod
 
     cards = _find_cards(soup)
     results: List[ProductRaw] = []
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ts = datetime.now().isoformat()
 
     for c in cards:
         try:

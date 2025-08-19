@@ -51,8 +51,12 @@ def load_to_gsheets(df: pd.DataFrame, spreadsheet_id: str) -> None:
         spreadsheet = client.open_by_key(spreadsheet_id)
         sheet = spreadsheet.sheet1
         
+        df_for_gsheets = df.copy()
+        if 'Timestamp' in df_for_gsheets.columns:
+            df_for_gsheets['Timestamp'] = df_for_gsheets['Timestamp'].dt.strftime('%Y-%m-%dT%H:%M:%S.%f')
+        
         sheet.clear()
-        sheet.update([df.columns.values.tolist()] + df.values.tolist())
+        sheet.update([df_for_gsheets.columns.values.tolist()] + df_for_gsheets.values.tolist())
         
         logging.info(f"[Google Sheets] Data berhasil disimpan di spreadsheet: {spreadsheet.title}")
 
@@ -88,12 +92,12 @@ def load_to_postgres(df: pd.DataFrame, db_config: dict, table_name: str = "etl_d
         CREATE TABLE IF NOT EXISTS {table_name} (
             id SERIAL PRIMARY KEY,
             Title TEXT,
-            Price BIGINT,
+            Price FLOAT,
             Rating FLOAT,
             Colors INT,
             Size TEXT,
             Gender TEXT,
-            Timestamp TEXT
+            Timestamp TIMESTAMP
         )
         """
         cur.execute(create_table_query)
@@ -101,7 +105,7 @@ def load_to_postgres(df: pd.DataFrame, db_config: dict, table_name: str = "etl_d
         for _, row in df.iterrows():
             cur.execute(
                 f"INSERT INTO {table_name} (Title, Price, Rating, Colors, Size, Gender, Timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                (row["Title"], int(row["Price"]), float(row["Rating"]), int(row["Colors"]),
+                (row["Title"], float(row["Price"]), float(row["Rating"]), int(row["Colors"]),
                 row["Size"], row["Gender"], row["Timestamp"])
             )
 
