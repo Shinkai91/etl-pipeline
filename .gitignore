@@ -2,3 +2,4 @@ google-sheets-api.json
 submission.txt
 __pycache__
 .pytest_cache
+.env
